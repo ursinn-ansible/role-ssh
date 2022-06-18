@@ -1,4 +1,4 @@
-# ansible-role-ssh
+# Ansible Role - SSH
 
 [![GitHub last commit](https://img.shields.io/github/last-commit/ursinn/ansible-role-ssh?logo=github&style=for-the-badge)](https://github.com/ursinn/ansible-role-ssh/commits)
 [![License](https://img.shields.io/github/license/ursinn/ansible-role-ssh?style=for-the-badge)](https://github.com/ursinn/ansible-role-ssh/blob/main/LICENSE)
