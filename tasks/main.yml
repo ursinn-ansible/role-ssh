@@ -5,7 +5,7 @@
     state: directory
     mode: 0700
     owner: "{{ system_ssh_user }}"
-    group: "{{ system_ssh_user if ansible_pkg_mgr != 'zypper' else 'users' }}"
+    group: "{{ system_ssh_user if ansible_os_family != 'Suse' else 'users' }}"
 
 - name: "Insert public ssh key for user {{ system_ssh_user }}"
   ansible.builtin.blockinfile:
@@ -13,7 +13,7 @@
     create: true
     owner: "{{ system_ssh_user }}"
     group: "{{ system_ssh_user if ansible_os_family != 'Suse' else 'users' }}"
-    mode: 0644
+    mode: 0600
     block: "{{ system_ssh_user_key }}"
 
 - name: Disable root login.
