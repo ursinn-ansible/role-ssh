@@ -66,17 +66,17 @@
   notify: restart sshd
 
 - name: Ensure SSH is started and enabled at boot
-  service:
+  ansible.builtin.service:
     name: sshd
     state: "{{ system_ssh_service_state }}"
     enabled: "{{ system_ssh_service_enabled }}"
   ignore_errors: "{{ ansible_check_mode }}"
 
 - name: Ensure handlers are notified now to avoid firewall conflicts
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers
 
 - name: Check if group exists
-  shell: /usr/bin/getent group | awk -F":" '{print $1}'
+  ansible.builtin.shell: /usr/bin/getent group | awk -F":" '{print $1}'
   changed_when: false
   register: etc_groups
 
