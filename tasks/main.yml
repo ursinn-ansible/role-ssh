@@ -16,37 +16,35 @@
     mode: 0600
     block: "{{ system_ssh_user_key }}"
 
-- name: Disable root login.
-  ansible.builtin.lineinfile: 
-    path: /etc/ssh/sshd_config
-    regexp: "^PermitRootLogin"
-    line: "PermitRootLogin no"
-    state: present
-  notify: restart sshd
 
-- name: Disable password login (PasswordAuthentication)
-  ansible.builtin.lineinfile: 
-    path: /etc/ssh/sshd_config
-    regexp: "^PasswordAuthentication"
-    line: "PasswordAuthentication no"
+- name: Update SSH configuration to be more secure.
+  lineinfile:
+    dest: "{{ system_ssh_config_path }}"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
     state: present
-  notify: restart sshd
-
-- name: Disable password login (ChallengeResponseAuthentication)
-  ansible.builtin.lineinfile: 
-    path: /etc/ssh/sshd_config
-    regexp: "^ChallengeResponseAuthentication"
-    line: "ChallengeResponseAuthentication no"
-    state: present
-  notify: restart sshd
-
-- name: Set AuthenticationMethods to publickey
-  ansible.builtin.lineinfile: 
-    path: /etc/ssh/sshd_config
-    regexp: "^AuthenticationMethods"
-    line: "AuthenticationMethods publickey"
-    state: present
-  notify: restart sshd
+    validate: 'sshd -T -f %s'
+    mode: 0644
+  with_items:
+    - regexp: "^PasswordAuthentication"
+      line: "PasswordAuthentication no"
+    - regexp: "^PermitRootLogin"
+      line: "PermitRootLogin no"
+    - regexp: "^Port"
+      line: "Port {{ system_ssh_port }}"
+    - regexp: "^UseDNS"
+      line: "UseDNS no"
+    - regexp: "^PermitEmptyPasswords"
+      line: "PermitEmptyPasswords no"
+    - regexp: "^ChallengeResponseAuthentication"
+      line: "ChallengeResponseAuthentication no"
+    - regexp: "^GSSAPIAuthentication"
+      line: "GSSAPIAuthentication no"
+    - regexp: "^X11Forwarding"
+      line: "X11Forwarding no"
+    - regexp: "^AuthenticationMethods"
+      line: "AuthenticationMethods publickey"
+  notify: restart ssh
 
 - name: Insert banner
   ansible.builtin.copy:
@@ -59,15 +57,18 @@
 
 - name: Enable banner
   ansible.builtin.lineinfile: 
-    path: /etc/ssh/sshd_config
+    dest: "{{ system_ssh_config_path }}"
     regexp: "^Banner none"
     line: "Banner /etc/issue.net"
     state: present
-  notify: restart sshd
+    create: true
+    validate: 'sshd -T -f %s'
+    mode: 0644
+  notify: restart ssh
 
 - name: Ensure SSH is started and enabled at boot
   ansible.builtin.service:
-    name: sshd
+    name: "{{ system_sshd_name }}"
     state: "{{ system_ssh_service_state }}"
     enabled: "{{ system_ssh_service_enabled }}"
   ignore_errors: "{{ ansible_check_mode }}"
@@ -80,12 +81,48 @@
   changed_when: false
   register: etc_groups
 
-- name: "Add user {{ system_ssh_user }} to sudo group"
-  ansible.builtin.user:
-    name: "{{ system_ssh_user }}"
-    groups: "{{ item }}"
-    append: yes
-  when: 'item in etc_groups.stdout_lines'
-  with_items: 
-    - sudo
-    - wheel
+- name: Add configured users allowed to connect over ssh
+  lineinfile:
+    dest: "{{ system_ssh_config_path }}"
+    regexp: '^AllowUsers'
+    line: "AllowUsers {{ system_ssh_allowed_users | join(' ') }}"
+    state: present
+    create: true
+    validate: 'sshd -T -f %s'
+    mode: 0644
+  when: system_ssh_allowed_users | length > 0
+  notify: restart ssh
+
+- name: Add configured groups allowed to connect over ssh
+  lineinfile:
+    dest: "{{ system_ssh_config_path }}"
+    regexp: '^AllowGroups'
+    line: "AllowGroups {{ system_ssh_allowed_groups | join(' ') }}"
+    state: present
+    create: true
+    validate: 'sshd -T -f %s'
+    mode: 0644
+  when: system_ssh_allowed_groups | length > 0
+  notify: restart ssh
+
+- name: Add configured user accounts to passwordless sudoers.
+  lineinfile:
+    dest: /etc/sudoers
+    regexp: '^{{ item }}'
+    line: '{{ item }} ALL=(ALL) NOPASSWD: ALL'
+    state: present
+    validate: 'visudo -cf %s'
+    mode: 0440
+  with_items: "{{ system_sudoers_passwordless }}"
+  when: system_sudoers_passwordless | length > 0
+
+- name: Add configured user accounts to passworded sudoers.
+  lineinfile:
+    dest: /etc/sudoers
+    regexp: '^{{ item }}'
+    line: '{{ item }} ALL=(ALL) ALL'
+    state: present
+    validate: 'visudo -cf %s'
+    mode: 0440
+  with_items: "{{ system_sudoers_passworded }}"
+  when: system_sudoers_passworded | length > 0

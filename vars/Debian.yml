@@ -1,0 +1,3 @@
+---
+system_ssh_config_path: /etc/ssh/sshd_config
+system_sshd_name: ssh
