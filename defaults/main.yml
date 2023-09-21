@@ -1,7 +1,9 @@
 ---
 system_ssh_port: 22
+system_ssh_name: ssh
 system_ssh_service_state: started
 system_ssh_service_enabled: true
+system_ssh_config_path: /etc/ssh/sshd_config
 system_ssh_restart_handler_state: restarted
 system_ssh_allowed_users: []
 system_ssh_allowed_groups: []
