@@ -1,4 +1,4 @@
 - name: restart ssh
   service:
-    name: "{{ system_sshd_name }}"
+    name: "{{ system_ssh_name }}"
     state: "{{ system_ssh_restart_handler_state }}"
