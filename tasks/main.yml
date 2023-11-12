@@ -1,30 +1,29 @@
 ---
 - name: Set permissions for .ssh directory
   ansible.builtin.file:
-    path: "/home/{{ system_ssh_user }}/.ssh"
+    path: "/home/{{ system_ssh.user }}/.ssh"
     state: directory
     mode: 0700
-    owner: "{{ system_ssh_user }}"
-    group: "{{ system_ssh_user if ansible_os_family != 'Suse' else 'users' }}"
+    owner: "{{ system_ssh.user }}"
+    group: "{{ system_ssh.user if ansible_os_family != 'Suse' else 'users' }}"
 
-- name: "Insert public ssh key for user {{ system_ssh_user }}"
+- name: "Insert public ssh key for user {{ system_ssh.user }}"
   ansible.builtin.blockinfile:
-    dest: "/home/{{ system_ssh_user }}/.ssh/authorized_keys"
+    dest: "/home/{{ system_ssh.user }}/.ssh/authorized_keys"
     create: true
-    owner: "{{ system_ssh_user }}"
-    group: "{{ system_ssh_user if ansible_os_family != 'Suse' else 'users' }}"
+    owner: "{{ system_ssh.user }}"
+    group: "{{ system_ssh.user if ansible_os_family != 'Suse' else 'users' }}"
     mode: 0600
-    block: "{{ system_ssh_user_key }}"
-
+    block: "{{ system_ssh.user_key }}"
 
 - name: Update SSH configuration to be more secure.
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: "{{ system_ssh_config_path }}"
     regexp: "{{ item.regexp }}"
     line: "{{ item.line }}"
     state: present
     validate: 'sshd -T -f %s'
-    mode: 0644
+    mode: "{{ system_ssh_config_mode }}"
   with_items:
     - regexp: "^PasswordAuthentication"
       line: "PasswordAuthentication no"
@@ -44,6 +43,56 @@
       line: "X11Forwarding no"
     - regexp: "^AuthenticationMethods"
       line: "AuthenticationMethods publickey"
+    - regexp: "^PubkeyAuthentication"
+      line: "PubkeyAuthentication yes"
+    - regexp: "^KerberosAuthentication"
+      line: "KerberosAuthentication no"
+    - regexp: "^HostbasedAuthentication"
+      line: "HostbasedAuthentication no"
+    - regexp: "^GSSAPIKeyExchange"
+      line: "GSSAPIKeyExchange no"
+    - regexp: "^RekeyLimit"
+      line: "RekeyLimit 512M 6h"
+    - regexp: "^StrictModes"
+      line: "StrictModes yes"
+    - regexp: "^UsePrivilegeSeparation"
+      line: "UsePrivilegeSeparation sandbox"
+    - regexp: "^Protocol"
+      line: "Protocol 2"
+    - regexp: "^LogLevel"
+      line: "LogLevel INFO"
+    - regexp: "^MaxAuthTries"
+      line: "MaxAuthTries 4"
+    - regexp: "^IgnoreRhosts"
+      line: "IgnoreRhosts yes"
+    - regexp: "^PermitUserEnvironment"
+      line: "PermitUserEnvironment no"
+    - regexp: "^KexAlgorithms"
+      line: "KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group14-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,ecdh-sha2-nistp521,ecdh-sha2-nistp384,ecdh-sha2-nistp256,diffie-hellman-group-exchange-sha256"
+    - regexp: "^MACs"
+      line: "MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256"
+    - regexp: "^Ciphers"
+      line: "Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr"
+    - regexp: "^PermitTunnel"
+      line: "PermitTunnel no"
+    - regexp: "^GatewayPorts"
+      line: "GatewayPorts no"
+    - regexp: "^maxsessions"
+      line: "maxsessions 10"
+    - regexp: "^maxstartups"
+      line: "maxstartups 10:30:60"
+    - regexp: "^DenyUsers"
+      line: "DenyUsers nobody"
+    - regexp: "^DenyGroups"
+      line: "DenyGroups nobody"
+    - regexp: "^LoginGraceTime"
+      line: "LoginGraceTime 60"
+    - regexp: "^ClientAliveInterval"
+      line: "ClientAliveInterval 300"
+    - regexp: "^ClientAliveCountMax"
+      line: "ClientAliveCountMax 0"
+    - regexp: "^PermitUserRC"
+      line: "PermitUserRC no"
   notify: restart ssh
 
 - name: Insert banner
@@ -63,12 +112,12 @@
     state: present
     create: true
     validate: 'sshd -T -f %s'
-    mode: 0644
+    mode: "{{ system_ssh_config_mode }}"
   notify: restart ssh
 
 - name: Ensure SSH is started and enabled at boot
   ansible.builtin.service:
-    name: "{{ system_ssh_name }}"
+    name: "{{ system_ssh_service_name }}"
     state: "{{ system_ssh_service_state }}"
     enabled: "{{ system_ssh_service_enabled }}"
   ignore_errors: "{{ ansible_check_mode }}"
@@ -82,31 +131,31 @@
   register: etc_groups
 
 - name: Add configured users allowed to connect over ssh
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: "{{ system_ssh_config_path }}"
     regexp: '^AllowUsers'
     line: "AllowUsers {{ system_ssh_allowed_users | join(' ') }}"
     state: present
     create: true
     validate: 'sshd -T -f %s'
-    mode: 0644
+    mode: "{{ system_ssh_config_mode }}"
   when: system_ssh_allowed_users | length > 0
   notify: restart ssh
 
 - name: Add configured groups allowed to connect over ssh
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: "{{ system_ssh_config_path }}"
     regexp: '^AllowGroups'
     line: "AllowGroups {{ system_ssh_allowed_groups | join(' ') }}"
     state: present
     create: true
     validate: 'sshd -T -f %s'
-    mode: 0644
+    mode: "{{ system_ssh_config_mode }}"
   when: system_ssh_allowed_groups | length > 0
   notify: restart ssh
 
 - name: Add configured user accounts to passwordless sudoers.
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/sudoers
     regexp: '^{{ item }}'
     line: '{{ item }} ALL=(ALL) NOPASSWD: ALL'
@@ -117,7 +166,7 @@
   when: system_sudoers_passwordless | length > 0
 
 - name: Add configured user accounts to passworded sudoers.
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/sudoers
     regexp: '^{{ item }}'
     line: '{{ item }} ALL=(ALL) ALL'
