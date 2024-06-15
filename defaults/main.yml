@@ -1,16 +1,45 @@
 ---
-system_ssh_port: 22
-system_ssh_config_path: /etc/ssh/sshd_config
-system_ssh_config_mode: 0600
-system_ssh_service_name: ssh
-system_ssh_service_state: started
-system_ssh_service_enabled: true
-system_ssh_service_restart_handler_state: restarted
-system_ssh_allowed_users: []
-system_ssh_allowed_groups: []
-system_ssh:
-  user: ""
-  user_key: ""
+role_ssh_port: 22
+role_ssh_users: {}
 
-system_sudoers_passwordless: []
-system_sudoers_passworded: []
+role_ssh_x11forwarding: no
+
+role_ssh_service_name: ssh
+role_ssh_service_state: started
+role_ssh_service_enabled: true
+role_ssh_service_restart_handler_state: restarted
+
+role_ssh_allowed_users: []
+role_ssh_allowed_groups: []
+
+role_ssh_sudoers_passwordless: []
+role_ssh_sudoers_passworded: []
+
+role_ssh_key_types:
+  - 'ed25519'
+role_ssh_key_types_list:
+  - ed25519
+  - rsa
+  - ecdsa
+  - dsa
+role_ssh_key_algorithmus:
+  - 'ssh-ed25519-cert-v01@openssh.com'
+  - 'ssh-ed25519'
+  - 'ecdsa-sha2-nistp521-cert-v01@openssh.com'
+  - 'ecdsa-sha2-nistp384-cert-v01@openssh.com'
+  - 'ecdsa-sha2-nistp256-cert-v01@openssh.com'
+
+role_ssh_kex_algorithmus:
+  - 'curve25519-sha256@libssh.org'
+  - 'diffie-hellman-group-exchange-sha256'
+
+role_ssh_macs:
+  - 'hmac-sha2-512-etm@openssh.com'
+  - 'hmac-sha2-256-etm@openssh.com'
+  - 'hmac-sha2-512'
+
+role_ssh_ciphers:
+  - 'chacha20-poly1305@openssh.com'
+  - 'aes256-gcm@openssh.com'
+  - 'aes256-ctr'
+
