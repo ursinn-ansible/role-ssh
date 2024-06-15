@@ -1,0 +1,29 @@
+---
+- name: Generate new ssh host key pair if necessary
+  become: true
+  community.crypto.openssh_keypair:
+    path: "/etc/ssh/ssh_host_{{ item }}_key"
+    type: "{{ item }}"
+  with_items: "{{ role_ssh_key_types }}"
+  notify:
+    - restart ssh
+
+- name: make sure only the correct keys are available
+  ansible.builtin.file:
+    path: '/etc/ssh/ssh_host_{{ item }}_key'
+    state: absent
+  become: true
+  with_items:
+    - "{{ role_ssh_key_types_list | difference( role_ssh_key_types ) }}"
+  notify:
+    - restart ssh
+
+- name: make sure only the correct pubkeys are available
+  ansible.builtin.file:
+    path: '/etc/ssh/ssh_host_{{ item }}_key.pub'
+    state: absent
+  become: true
+  with_items:
+    - "{{ role_ssh_key_types_list | difference( role_ssh_key_types ) }}"
+  notify:
+    - restart ssh
