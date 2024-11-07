@@ -1,4 +1,17 @@
 ---
+- name: Create group for missing ssh users
+  become: true
+  ansible.builtin.group:
+    name: '{{ item.key }}'
+  with_dict: "{{ role_ssh_users }}"
+
+- name: Create missing ssh users
+  ansible.builtin.user:
+    name: '{{ item.key }}'
+    group: '{{ item.key }}'
+    append: true
+  with_dict: "{{ role_ssh_users }}"
+
 - name: Set permissions for .ssh directory
   ansible.builtin.file:
     path: "/home/{{ item.key }}/.ssh"
@@ -8,7 +21,7 @@
     group: "{{ item.key if ansible_os_family != 'Suse' else 'users' }}"
   with_dict: "{{ role_ssh_users }}"
 
-- name: "Insert public ssh key for users"
+- name: Insert public ssh key for users
   ansible.builtin.blockinfile:
     dest: "/home/{{ item.key }}/.ssh/authorized_keys"
     create: true
