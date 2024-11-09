@@ -1,15 +1,14 @@
 ---
 - name: Create group for missing ssh users
-  become: true
   ansible.builtin.group:
     name: '{{ item.key }}'
+    state: present
   with_dict: "{{ role_ssh_users }}"
 
 - name: Create missing ssh users
   ansible.builtin.user:
     name: '{{ item.key }}'
     group: '{{ item.key }}'
-    append: true
   with_dict: "{{ role_ssh_users }}"
 
 - name: Set permissions for .ssh directory
